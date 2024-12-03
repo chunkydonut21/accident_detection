@@ -6,8 +6,28 @@ from tensorflow.keras.models import load_model
 model = load_model("accident_detection_model.keras")
 
 # Define the video source (0 for webcam or path to a video file)
-video_path = './data/brutal_car_crash.mp4'
+video_path = './data/raw_video.mp4'
 cap = cv2.VideoCapture(video_path)
+
+# Check if the video was opened successfully
+if not cap.isOpened():
+    print("Error: Could not open video.")
+    exit()
+
+# Get the video frame width, height, and FPS
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+# Define the codec and create a VideoWriter object to save the video
+output_path = '/Users/shivammaheshwari/Downloads/output_labeled_video.mp4'
+fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # Codec for mp4 format
+out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+
+if not out.isOpened():
+    print("Error: Could not open VideoWriter for output.")
+    exit()
+
 
 # Define image size for resizing to match model input
 img_size = (250, 250)
@@ -18,7 +38,7 @@ while cap.isOpened():
     if not ret:
         break
 
-    # Resize and normalize the frame to match model input size
+    # Resize and preprocess the frame for prediction
     img = cv2.resize(frame, img_size)
     img = np.expand_dims(img, axis=0)  # Add batch dimension
 
@@ -32,8 +52,11 @@ while cap.isOpened():
     cv2.putText(frame, f"{label} ({confidence:.2f})", (20, 30), 
                 cv2.FONT_HERSHEY_SIMPLEX, 1, 
                 (0, 0, 255) if label == "Accident" else (0, 255, 0), 2)
+    
+    # Write the labeled frame to the output video file
+    out.write(frame)
 
-    # Show the frame with predictions
+    # Show the frame with predictions (optional)
     cv2.imshow("Accident Detection", frame)
 
     # Press 'q' to exit the video display
@@ -42,4 +65,7 @@ while cap.isOpened():
 
 # Release resources
 cap.release()
+out.release()  # Important to release the VideoWriter
 cv2.destroyAllWindows()
+
+print(f"Labeled video saved as {output_path}")
